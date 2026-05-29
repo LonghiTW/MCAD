@@ -171,7 +171,7 @@ export function App() {
       <aside className="left-rail">
         <div className="brand">
           <Box size={22} />
-          <span>BTECAD</span>
+          <span>MCAD</span>
         </div>
         <div className="tool-stack" aria-label="Tools">
           {tools.map((tool) => {
