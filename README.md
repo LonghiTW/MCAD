@@ -1,6 +1,6 @@
-# BTECAD Minecraft GIS/CAD Editor
+# MCAD Minecraft Editor
 
-BTECAD is a web-based Minecraft world editor with geospatial projection overlays. Minecraft X/Z is the canonical coordinate space; WGS84 data and map tiles are projected into that space as references.
+MCAD is a web-based Minecraft world editor with geospatial projection overlays. Minecraft X/Z is the canonical coordinate space; WGS84 data and map tiles are projected into that space as references.
 
 Inspired by [TerrasEdit](https://github.com/Codestian/TerrasEdit), but with a stricter architecture: the Minecraft voxel world is primary, while GIS data and map tiles are overlays.
 
