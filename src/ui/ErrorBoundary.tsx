@@ -20,7 +20,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
     return (
       <main className="app-error">
-        <h1>BTECAD failed to render</h1>
+        <h1>MCAD failed to render</h1>
         <pre>{this.state.error.message || String(this.state.error)}</pre>
       </main>
     );
