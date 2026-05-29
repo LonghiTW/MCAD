@@ -54,7 +54,7 @@ export type TileSourceKind = "xyz" | "wmts";
 
 export type TileSource = {
   id: string;
-  name: string | Record<string, string>;
+  name: string;
   kind: TileSourceKind;
   urlTemplate: string;
   attribution?: string | any;
@@ -70,7 +70,7 @@ export type TileSource = {
 };
 
 export type TileLibraryNode = {
-  name: string | Record<string, string>;
+  name: string;
   children: (TileSource | TileLibraryNode)[];
 };
 
