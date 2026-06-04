@@ -57,9 +57,10 @@ export function ViewportCanvas({ onCoordinate }: Props) {
       geometries: state.geometries,
       draftVertices: state.draftVertices,
       selectedGeometryId: state.selectedGeometryId,
-      tileSources: state.tileSources
+      tileSources: state.tileSources,
+      gridVisible: state.gridVisible
     }),
-    [state.viewport, state.chunks, state.geometries, state.draftVertices, state.selectedGeometryId, state.tileSources]
+    [state.viewport, state.chunks, state.geometries, state.draftVertices, state.selectedGeometryId, state.tileSources, state.gridVisible]
   );
 
   useEffect(() => {

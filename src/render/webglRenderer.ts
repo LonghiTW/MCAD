@@ -9,6 +9,7 @@ type RenderInput = {
   draftVertices: Vec2[];
   selectedGeometryId: string | null;
   tileSources: TileSource[];
+  gridVisible: boolean;
 };
 
 type ProgramInfo = {
@@ -111,9 +112,11 @@ export class MinecraftWebGLRenderer {
     });
 
     this.addGrassPlane(vertices, input.viewport, toScreen);
-    this.addGrid(vertices, input.viewport, toScreen);
     this.addChunks(vertices, input, toScreen);
     this.addGeometry(vertices, input, toScreen);
+    if (input.gridVisible) {
+      this.addGrid(vertices, input.viewport, toScreen);
+    }
 
     gl.useProgram(this.info.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);

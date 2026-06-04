@@ -4,7 +4,6 @@ interface LeafSource {
   id: string;
   name: string;
   url: string;
-  maxZoom: number;
   default?: boolean;
 }
 
@@ -26,35 +25,30 @@ export const TILE_LIBRARY: SourceNode[] = [
     id: "osm",
     name: "OpenStreetMap",
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    maxZoom: 19,
     default: true
   },
   {
     id: "bing_aerial",
     name: "Bing Maps",
     url: "https://t.ssl.ak.dynamic.tiles.virtualearth.net/comp/ch/{u}?it=A&shading=hill",
-    maxZoom: 19,
     default: false
   },
   {
     id: "yandex_aerial",
     name: "Yandex Maps",
     url: "https://core-sat.maps.yandex.net/tiles?l=sat&x={x}&y={y}&z={z}",
-    maxZoom: 19,
     default: false
   },
   {
     id: "google-satellite",
     name: "Google Satellite",
     url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-    maxZoom: 21,
     default: false
   },
   {
     id: "esri-world-imagery",
     name: "Esri World Imagery",
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    maxZoom: 19,
     default: false
   },
 
@@ -66,14 +60,12 @@ export const TILE_LIBRARY: SourceNode[] = [
         id: "taiwan-ortho",
         name: "臺灣正射影像",
         url: "https://wmts.nlsc.gov.tw/wmts/PHOTO2/default/GoogleMapsCompatible/{z}/{y}/{x}.png",
-        maxZoom: 21,
         default: false
       },
       {
         id: "taiwan-emap",
         name: "臺灣通用電子地圖",
         url: "https://wmts.nlsc.gov.tw/wmts/EMAP15/default/GoogleMapsCompatible/{z}/{y}/{x}.png",
-        maxZoom: 21,
         default: false
       },
       {
@@ -83,14 +75,12 @@ export const TILE_LIBRARY: SourceNode[] = [
             id: "taipei-ortho",
             name: "臺北市航測影像",
             url: "https://www.historygis.udd.gov.taipei/arcgis/rest/services/Aerial/Ortho_2023/MapServer/WMTS/tile/1.0.0/Aerial_Ortho_2023/default/default028mm/{z}/{y}/{x}.png",
-            maxZoom: 22,
             default: false
           },
           {
             id: "taipei-topo",
             name: "臺北市1/1000地形圖",
             url: "https://www.historygis.udd.gov.taipei/arcgis/rest/services/TOPO/DGN_2023/MapServer/WMTS/tile/1.0.0/TOPO_DGN_2023/default/GoogleMapsCompatible/{z}/{y}/{x}.png",
-            maxZoom: 22,
             default: false
           }
         ]
@@ -106,35 +96,30 @@ export const TILE_LIBRARY: SourceNode[] = [
         id: "kakao_aerial",
         name: "Kakao Map (Satellite)",
         url: "http://map{random:0,1,2,3}.daumcdn.net/map_skyview/L{z}/{y}/{x}.jpg",
-        maxZoom: 20,
         default: false
       },
       {
         id: "kakao_plain",
         name: "Kakao Map",
         url: "http://map{random:0,1,2,3}.daumcdn.net/map_2d/2012tlq/L{z}/{y}/{x}.png",
-        maxZoom: 20,
         default: false
       },
       {
         id: "naver_aerial",
         name: "Naver Map (Satellite)",
         url: "https://map.pstatic.net/nrb/styles/satellite/{z}/{x}/{y}.png",
-        maxZoom: 19,
         default: false
       },
       {
         id: "naver_plain",
         name: "Naver Map",
         url: "https://map.pstatic.net/nrb/styles/basic/{z}/{x}/{y}.png",
-        maxZoom: 19,
         default: false
       },
       {
         id: "tmap_plain",
         name: "T Map",
         url: "https://topopentile2.tmap.co.kr/tms/1.0.0/hd_tile/{z}/{x}/{y}.png",
-        maxZoom: 19,
         default: false
       }
     ]
@@ -148,14 +133,12 @@ export const TILE_LIBRARY: SourceNode[] = [
         id: "lidar_jp_aerial",
         name: "Japan LiDAR (Satellite)",
         url: "http://maps.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-        maxZoom: 17,
         default: false
       },
       {
         id: "lidar_jp_plain",
         name: "Japan LiDAR",
         url: "http://maps.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-        maxZoom: 17,
         default: false
       }
     ]
@@ -169,14 +152,12 @@ export const TILE_LIBRARY: SourceNode[] = [
         id: "onemap_default",
         name: "OneMap Default",
         url: "https://www.onemap.gov.sg/maps/tiles/Default_HD/{z}/{x}/{y}.png",
-        maxZoom: 19,
         default: false
       },
       {
         id: "onemap_satellite",
         name: "OneMap Satellite",
         url: "https://www.onemap.gov.sg/maps/tiles/Satellite/{z}/{x}/{y}.png",
-        maxZoom: 19,
         default: false
       }
     ]
@@ -190,14 +171,12 @@ export const TILE_LIBRARY: SourceNode[] = [
         id: "geomap_hk",
         name: "香港地理資訊地圖",
         url: "https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/basemap/wgs84/{z}/{x}/{y}.png",
-        maxZoom: 20,
         default: false
       },
       {
         id: "ortho_HK",
         name: "香港正射影像",
         url: "https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/imagery/WGS84/{z}/{x}/{y}.png",
-        maxZoom: 19,
         default: false
       }
     ]
@@ -222,8 +201,7 @@ const ALL_FLAT_SOURCES = flattenSources(TILE_LIBRARY);
 export const TILE_PRESETS = ALL_FLAT_SOURCES.map((s) => ({ 
   id: s.id, 
   name: s.pathName, 
-  url: s.url,
-  maxZoom: s.maxZoom 
+  url: s.url
 }));
 
 /** 供 tiles.ts / Store 初始狀態使用 */
@@ -237,7 +215,7 @@ export const defaultTileSources: TileSource[] = ALL_FLAT_SOURCES
     visible: true,
     opacity: 1.0,
     minZoom: 0,
-    maxZoom: s.maxZoom,
+    maxZoom: 0,
     offsetX: 0,
     offsetZ: 0
   }));

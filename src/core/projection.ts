@@ -74,8 +74,35 @@ export function sampledBteWorldCenter(): Vec2 {
 }
 
 export function defaultBteViewportCenter(): Vec2 {
-  const bounds = sampledBteWorldBounds();
-  const height = bounds.maxZ - bounds.minZ;
+  // Instead of using the sampled bounds center (which may be outside the projection),
+  // find a good starting location by sampling known geographic regions and picking a valid one.
+  
+  // Try major cities in BTE coverage area (Europe, North America, etc.)
+  // Format: {lon, lat, label}
+  const testLocations = [
+    { lon: 0, lat: 0, label: "Prime Meridian" },      // Equator/Prime Meridian
+    { lon: 10, lat: 50, label: "Europe Center" },     // Central Europe
+    { lon: -100, lat: 40, label: "USA Midwest" },     // USA Midwest
+    { lon: 139, lat: 35, label: "Japan" },            // Japan
+    { lon: -50, lat: -20, label: "South America" },   // South America
+  ];
+
+  for (const loc of testLocations) {
+    try {
+      const mc = latLonToMinecraft({ lon: loc.lon, lat: loc.lat });
+      if (Number.isFinite(mc.x) && Number.isFinite(mc.z)) {
+        console.log(`[defaultBteViewportCenter] Found valid location: ${loc.label} (${loc.lon}, ${loc.lat}) => Minecraft (${mc.x.toFixed(0)}, ${mc.z.toFixed(0)})`);
+        return mc;
+      }
+    } catch {
+      // This location not in BTE projection, try next
+    }
+  }
+
+  // Fallback: if no locations work, use the Minecraft bounds center
+  // (this shouldn't happen if BTE projection is working)
+  const bounds = bteWorldBounds();
+  console.warn(`[defaultBteViewportCenter] No test locations valid, falling back to bounds center`);
   return {
     x: (bounds.minX + bounds.maxX) / 2,
     z: (bounds.minZ + bounds.maxZ) / 2

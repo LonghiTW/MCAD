@@ -21,7 +21,7 @@ import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { defaultBteViewportCenter, latLonToMinecraft, sampledBteWorldBounds } from "../core/projection";
 import { exportSpongeSchematic } from "../core/schematic";
-import { TILE_LIBRARY, TILE_PRESETS, type SourceNode } from "../core/tileSources";
+import { TILE_LIBRARY, type SourceNode } from "../core/tileSources";
 import type { CoordinateReadout, ToolMode } from "../core/types";
 import { fitBoundsZoom } from "../core/view";
 import { allBlocks, blockPalette, useEditorStore } from "../store/editorStore";
@@ -54,7 +54,6 @@ export function App() {
   const [layerName, setLayerName] = useState("");
   const [layerUrl, setLayerUrl] = useState("");
   const [layerId, setLayerId] = useState("");
-  const [layerMaxZoom, setLayerMaxZoom] = useState(19); // 新增狀態來儲存 maxZoom
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [expandedLayerId, setExpandedLayerId] = useState<string | null>(null);
@@ -136,7 +135,6 @@ export function App() {
                 setLayerName(node.name);
                 setLayerUrl(node.url);
                 setLayerId(node.id);
-                setLayerMaxZoom(node.maxZoom); // 從選定的圖層設定 maxZoom
               }}
             >
               <span>{node.name}</span>
@@ -150,15 +148,12 @@ export function App() {
   const addLayer = (event: React.FormEvent) => {
     event.preventDefault();
     if (!layerUrl.trim() || !layerName.trim()) return;
-    
-    // 如果沒有 layerId (手動輸入時)，產生一個安全的 ID
+
     const safeId = layerId || layerName.toLowerCase().replace(/[^\w-]/g, '_') + '_' + Date.now();
-    
-    // 假設 store.addTileSource 支援傳入詳細設定
-    // 如果你的 store 只接受 (name, url)，你需要修改 store 的實作來支援 id 與初始 opacity
+
     store.addTileSource(layerName, layerUrl, {
       id: safeId,
-      opacity: 1.0 // 在這裡設定新增圖層的預設透明度
+      opacity: 1.0
     });
 
     setLayerName("");
@@ -212,22 +207,19 @@ export function App() {
               <Map size={16} />
               Tokyo
             </button>
-          </div>
-          <div className="readout">
-            <span>MC X {coordinate.minecraft.x.toFixed(2)}</span>
-            <span>Z {coordinate.minecraft.z.toFixed(2)}</span>
-            <span>Lat {coordinate.latLon.lat.toFixed(6)}</span>
-            <span>Lon {coordinate.latLon.lon.toFixed(6)}</span>
-          </div>
         </div>
-        <ViewportCanvas onCoordinate={setCoordinate} />
-        <div className="status-bar">
-          <span>Canonical space: Minecraft X/Z</span>
-          <span>Chunk {coordinate.chunk.cx}, {coordinate.chunk.cz}</span>
-          <span>Local {coordinate.chunk.localX}, {coordinate.chunk.localZ}</span>
-          <span>Zoom {store.viewport.zoom >= 0.01 ? store.viewport.zoom.toFixed(2) : store.viewport.zoom.toExponential(2)} px/block</span>
+      </div>
+      <ViewportCanvas onCoordinate={setCoordinate} />
+      <div className="status-bar">
+        <div className="readout">
+          <span>MC X {coordinate.minecraft.x.toFixed(2)}</span>
+          <span>Z {coordinate.minecraft.z.toFixed(2)}</span>
+          <span>Lat {coordinate.latLon.lat.toFixed(6)}</span>
+          <span>Lon {coordinate.latLon.lon.toFixed(6)}</span>
         </div>
-      </section>
+        <span>Zoom {store.viewport.zoom >= 0.01 ? store.viewport.zoom.toFixed(2) : store.viewport.zoom.toExponential(2)} px/block</span>
+      </div>
+    </section>
 
       <aside className="right-panel">
         <section className="panel-section">
@@ -236,12 +228,17 @@ export function App() {
             <h2>Layers</h2>
           </header>
           <div className="layer-row locked">
-            <span>Minecraft grass plane</span>
-            <strong>base</strong>
+            <input
+              type="checkbox"
+              checked={store.gridVisible}
+              onChange={() => store.setGridVisible(!store.gridVisible)}
+            />
+            <span>Block and chunk grid</span>
+            <strong>top</strong>
           </div>
           <div className="layer-row locked">
-            <span>Block and chunk grid</span>
-            <strong>world</strong>
+            <span>Minecraft grass plane</span>
+            <strong>base</strong>
           </div>
           {store.tileSources.map((source) => (
             <div className={expandedLayerId === source.id ? "tile-layer expanded" : "tile-layer"} key={source.id}>
@@ -286,14 +283,6 @@ export function App() {
                         type="number"
                         value={source.minZoom}
                         onChange={(event) => store.updateTileSource(source.id, { minZoom: Number(event.target.value) || 0 })}
-                      />
-                    </label>
-                    <label className="layer-field">
-                      <span>Max zoom</span>
-                      <input
-                        type="number"
-                        value={source.maxZoom}
-                        onChange={(event) => store.updateTileSource(source.id, { maxZoom: Number(event.target.value) || 0 })}
                       />
                     </label>
                   </div>
@@ -347,7 +336,14 @@ export function App() {
               )}
             </div>
             <input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Layer name" />
-            <input value={layerUrl} onChange={(event) => setLayerUrl(event.target.value)} placeholder="https://.../{z}/{x}/{y}.png" />
+            <input
+              value={layerUrl}
+              onChange={(event) => {
+                setLayerUrl(event.target.value);
+                setLayerId("");
+              }}
+              placeholder="https://.../{z}/{x}/{y}.png"
+            />
             <button type="submit">
               <Plus size={15} />
               Add layer

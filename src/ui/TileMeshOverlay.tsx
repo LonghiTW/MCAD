@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { latLonToMinecraft, tryMinecraftToLatLon } from "../core/projection";
+import { detectMaxZoomFromUrl } from "../core/tiles";
 import type { LatLon, TileSource, Vec2, ViewportState } from "../core/types";
+import { useEditorStore } from "../store/editorStore";
 
 type Props = {
   viewport: ViewportState;
@@ -134,7 +136,9 @@ function drawTexturedTriangle(
 }
 
 function chooseTiles(viewport: ViewportState, source: TileSource): TileRequest[] {
-  const z = Math.max(source.minZoom, Math.min(source.maxZoom, tileZoomForViewport(viewport.zoom)));
+  // When maxZoom is 0 (not yet detected), use a reasonable default to avoid z=0 (only 1 tile)
+  const effectiveMaxZoom = source.maxZoom > 0 ? source.maxZoom : 22;
+  const z = Math.max(source.minZoom, Math.min(effectiveMaxZoom, tileZoomForViewport(viewport.zoom)));
   const n = 2 ** z;
 
   if (viewport.zoom < 0.0002) {
@@ -174,6 +178,33 @@ function chooseTiles(viewport: ViewportState, source: TileSource): TileRequest[]
 export function TileMeshOverlay({ viewport, tileSources }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cacheRef = useRef(new Map<string, HTMLImageElement>());
+  const updateTileSource = useEditorStore((state) => state.updateTileSource);
+  const probedSourcesRef = useRef(new Map<string, string>());
+
+  // Probe for maxZoom of each tile source
+  useEffect(() => {
+    let cancelled = false;
+    for (const source of tileSources) {
+      const lastProbedUrl = probedSourcesRef.current.get(source.id);
+      if (lastProbedUrl === source.urlTemplate) continue; // Already probed this URL
+
+      const probeSource = async () => {
+        const detectedMaxZoom = await detectMaxZoomFromUrl(source.urlTemplate, source.id);
+        if (cancelled) return;
+        probedSourcesRef.current.set(source.id, source.urlTemplate);
+        if (detectedMaxZoom > 0 && detectedMaxZoom !== source.maxZoom) {
+          console.log(`[Probe] ${source.id}: detected maxZoom=${detectedMaxZoom}`);
+          updateTileSource(source.id, { maxZoom: detectedMaxZoom });
+        }
+      };
+
+      void probeSource();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tileSources, updateTileSource]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

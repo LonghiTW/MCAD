@@ -18,6 +18,7 @@ type EditorState = {
   geometries: Geometry[];
   chunks: Map<ChunkID, ChunkData>;
   tileSources: TileSource[];
+  gridVisible: boolean;
   activeBlock: string;
   history: HistoryState[];
   future: HistoryState[];
@@ -26,6 +27,7 @@ type EditorState = {
   setTool: (tool: ToolMode) => void;
   setActiveBlock: (block: string) => void;
   setSnapToGrid: (enabled: boolean) => void;
+  setGridVisible: (visible: boolean) => void;
   setSelectedGeometry: (id: string | null) => void;
   deleteGeometry: (id: string) => void;
   addDraftVertex: (point: Vec2) => void;
@@ -83,6 +85,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   geometries: [],
   chunks: new Map(),
   tileSources: defaultTileSources,
+  gridVisible: true,
   activeBlock: "gray_concrete",
   history: [],
   future: [],
@@ -96,6 +99,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })),
   setActiveBlock: (activeBlock) => set({ activeBlock }),
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
+  setGridVisible: (gridVisible) => set({ gridVisible }),
   setSelectedGeometry: (selectedGeometryId) => set({ selectedGeometryId }),
   deleteGeometry: (id) =>
     set((state) => {
@@ -210,7 +214,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           kind: "xyz",
           urlTemplate: urlTemplate.trim(),
           minZoom: 0,
-          maxZoom: options?.maxZoom ?? 19,
+          maxZoom: 0,
           visible: true,
           opacity: options?.opacity ?? 1.0,
           offsetX: 0,

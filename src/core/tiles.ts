@@ -22,6 +22,80 @@ function tileLatLonBounds(x: number, y: number, z: number): [LatLon, LatLon] {
   ];
 }
 
+function lonLatToTile(lon: number, lat: number, zoom: number) {
+  const latRad = (Math.max(-85.05112878, Math.min(85.05112878, lat)) * Math.PI) / 180;
+  const n = 2 ** zoom;
+  return {
+    x: Math.floor(((lon + 180) / 360) * n),
+    y: Math.floor(((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n)
+  };
+}
+
+function tileUrlFromTemplate(source: { urlTemplate: string; id?: string }, x: number, y: number, z: number) {
+  const isYandex = Boolean(source.id?.includes("yandex") || /yandex/.test(source.urlTemplate));
+  const yForUrl = isYandex ? 2 ** z - 1 - y : y;
+
+  let url = source.urlTemplate
+    .replace(/{x}/g, String(x))
+    .replace(/{y}/g, String(yForUrl))
+    .replace(/{z}/g, String(z));
+
+  if (url.includes("{u}")) {
+    url = url.replace(/{u}/g, toQuadKey(x, y, z));
+  }
+
+  url = url.replace(/{random:([^}]+)}/g, (_, options) => {
+    const choices = options.split(",");
+    const index = Math.abs(x + y) % choices.length;
+    return choices[index];
+  });
+
+  return url;
+}
+
+function loadImageUrl(url: string, timeoutMs = 4000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const finish = (success: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(success);
+    };
+
+    image.crossOrigin = "anonymous";
+    image.onload = () => finish(true);
+    image.onerror = () => finish(false);
+    image.src = url;
+    setTimeout(() => finish(false), timeoutMs);
+  });
+}
+
+export async function detectMaxZoomFromUrl(urlTemplate: string, id?: string, maxSearchZoom = 22): Promise<number> {
+  let lastSuccess = 0;
+  for (let z = 0; z <= maxSearchZoom; z += 1) {
+    const { x, y } = lonLatToTile(0, 0, z);
+    const url = tileUrlFromTemplate({ urlTemplate, id }, x, y, z);
+    // When running in the browser during development, route probe requests
+    // through the local dev server proxy to avoid CORS blocking. The dev
+    // server exposes `/tile-proxy?url=...` which will fetch the remote tile
+    // server-side and return it with permissive CORS headers.
+    let urlToLoad = url;
+    if (typeof window !== "undefined") {
+      try {
+        urlToLoad = `/tile-proxy?url=${encodeURIComponent(url)}`;
+      } catch {
+        urlToLoad = url;
+      }
+    }
+
+    const ok = await loadImageUrl(urlToLoad);
+    if (!ok) break;
+    lastSuccess = z;
+  }
+  return lastSuccess;
+}
+
 /**
  * 將 XYZ 座標轉換為 Bing Maps 使用的 Quadkey 字串
  */
@@ -39,7 +113,9 @@ function toQuadKey(x: number, y: number, z: number): string {
 
 export function reprojectTile(source: TileSource, x: number, y: number, z: number): ReprojectedTileQuad {
   // 1. Determine the effective zoom level for fetching tiles (overscaling)
-  const effectiveZ = Math.min(z, source.maxZoom);
+  // When maxZoom is 0 (not yet detected), use 22 as a reasonable default
+  const effectiveMaxZoom = source.maxZoom > 0 ? source.maxZoom : 22;
+  const effectiveZ = Math.min(z, effectiveMaxZoom);
 
   // 2. Adjust x and y coordinates to match the effectiveZ for tile fetching
   // If z > effectiveZ, it means we are overscaling, so we need to find the parent tile at effectiveZ
