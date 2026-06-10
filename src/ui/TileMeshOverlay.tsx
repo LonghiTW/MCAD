@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
+import { isTileOverlayLayer, layerToTileSource, type McadLayer } from "../core/layers";
 import { latLonToMinecraft, tryMinecraftToLatLon } from "../core/projection";
 import { detectMaxZoomFromUrl } from "../core/tiles";
+import { tileImageCache } from "../core/tileCache";
 import type { LatLon, TileSource, Vec2, ViewportState } from "../core/types";
 import { useEditorStore } from "../store/editorStore";
 
 type Props = {
   viewport: ViewportState;
-  tileSources: TileSource[];
+  layers: McadLayer[];
 };
 
 type TileRequest = {
@@ -175,11 +177,15 @@ function chooseTiles(viewport: ViewportState, source: TileSource): TileRequest[]
   return requests;
 }
 
-export function TileMeshOverlay({ viewport, tileSources }: Props) {
+export function TileMeshOverlay({ viewport, layers }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const cacheRef = useRef(new Map<string, HTMLImageElement>());
-  const updateTileSource = useEditorStore((state) => state.updateTileSource);
+  const updateTileOverlayLayer = useEditorStore((state) => state.updateTileOverlayLayer);
   const probedSourcesRef = useRef(new Map<string, string>());
+
+  // Convert McadLayer[] → TileSource[] for internal rendering (backward compat)
+  const tileSources: TileSource[] = layers
+    .filter(isTileOverlayLayer)
+    .map(layerToTileSource);
 
   // Probe for maxZoom of each tile source
   useEffect(() => {
@@ -194,7 +200,7 @@ export function TileMeshOverlay({ viewport, tileSources }: Props) {
         probedSourcesRef.current.set(source.id, source.urlTemplate);
         if (detectedMaxZoom > 0 && detectedMaxZoom !== source.maxZoom) {
           console.log(`[Probe] ${source.id}: detected maxZoom=${detectedMaxZoom}`);
-          updateTileSource(source.id, { maxZoom: detectedMaxZoom });
+          updateTileOverlayLayer(source.id, { maxZoom: detectedMaxZoom });
         }
       };
 
@@ -204,7 +210,7 @@ export function TileMeshOverlay({ viewport, tileSources }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [tileSources, updateTileSource]);
+  }, [tileSources, updateTileOverlayLayer]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -224,13 +230,13 @@ export function TileMeshOverlay({ viewport, tileSources }: Props) {
         ctx.globalAlpha = source.opacity;
         for (const request of chooseTiles(viewport, source)) {
           const url = source.urlTemplate.replace("{x}", String(request.x)).replace("{y}", String(request.y)).replace("{z}", String(request.z));
-          let image = cacheRef.current.get(url);
+          let image = tileImageCache.get(source.id, request.x, request.y, request.z);
           if (!image) {
             image = new Image();
             image.crossOrigin = "anonymous";
             image.src = url;
             image.onload = draw;
-            cacheRef.current.set(url, image);
+            tileImageCache.set(source.id, request.x, request.y, request.z, image);
           }
           if (!image.complete || image.naturalWidth === 0) continue;
 

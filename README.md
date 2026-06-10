@@ -47,7 +47,7 @@ Rasterized blocks are derived data. Geometry changes clear and rebuild the affec
 
 ## Run
 
-Install Node.js, then:
+Install Node.js 20+, then:
 
 ```bash
 npm install
@@ -56,7 +56,47 @@ npm run dev
 
 Open the Vite URL shown in the terminal, typically `http://localhost:5173`.
 
-Node 20+ is recommended, matching the TerrasEdit development baseline.
+### Node PATH Notes
+
+On Windows, ensure `node` is on your system PATH. If using nvm-windows or volta, restart your terminal after installation so the PATH takes effect:
+
+```powershell
+# Verify node version (should be >= 20)
+node --version
+
+# If node is not found, try restarting your terminal or:
+refreshenv
+```
+
+On macOS / Linux, if you use nvm:
+
+```bash
+nvm use 20
+node --version
+```
+
+### Smoke Tests
+
+The project includes smoke tests that verify core algorithms without needing a browser:
+
+```bash
+# Run all smoke tests at once
+npm run check:all
+
+# Or run individually
+npm run check:projection   # BTE projection round-trip
+npm run check:raster       # Bresenham line, scanline fill, chunk assignment
+npm run check:schematic    # Sponge schematic v3 NBT byte generation
+```
+
+All tests should print `All ... tests passed.` with zero failures.
+
+### Build
+
+```bash
+npm run build    # tsc + vite build
+npm run preview  # preview production build
+```
 
 ## Notes
 

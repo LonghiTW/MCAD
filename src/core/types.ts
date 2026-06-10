@@ -12,22 +12,48 @@ export type LatLon = {
   lon: number;
 };
 
-export type GeometryType = "polyline" | "polygon";
+export type GeometryType = "polyline" | "polygon" | "circle";
 
 export type GeometryProperties = {
   blockType: string;
+  /** Width in blocks (applies to polyline walls). */
   width?: number;
+  /** Total height in blocks (polygon fill layers up to this height). */
   height?: number;
+  /** Base Y offset in blocks — added to the geometry layer's verticalOffsetY. */
+  baseY?: number;
+  /** Line stack height — polyline is extruded upward this many blocks. */
+  lineStackHeight?: number;
+  /** Closed-shape line meaning: cell centerline, outer diameter, or inner diameter. */
+  boundaryMode?: "center" | "outer" | "inner";
+  /** Closed-shape fill mode. false = only ring/band edge; true = fill the selected side. */
+  solid?: boolean;
+  /** Bounded band thickness used for exterior solid generation. */
+  closedShapeThickness?: number;
   priority?: number;
 };
 
-export interface Geometry {
+export interface BaseGeometry {
   id: string;
   type: GeometryType;
+  properties: GeometryProperties;
+  /** Owning geometry layer id. Omitted for legacy data (treated as first geometry layer). */
+  layerId?: string;
+}
+
+export interface PathGeometry extends BaseGeometry {
+  type: "polyline" | "polygon";
   vertices: Vec2[];
   holes?: Vec2[][];
-  properties: GeometryProperties;
 }
+
+export interface CircleGeometry extends BaseGeometry {
+  type: "circle";
+  center: Vec2;
+  radius: number;
+}
+
+export type Geometry = PathGeometry | CircleGeometry;
 
 export type BlockCell = {
   x: number;
@@ -48,7 +74,7 @@ export type ChunkData = {
   updatedAt: number;
 };
 
-export type ToolMode = "select" | "pan" | "polyline" | "polygon" | "vertex" | "erase";
+export type ToolMode = "select" | "pan" | "polyline" | "polygon" | "vertex" | "erase" | "circle";
 
 export type TileSourceKind = "xyz" | "wmts";
 

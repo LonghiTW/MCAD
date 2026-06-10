@@ -1,5 +1,7 @@
 import { CHUNK_SIZE } from "../core/chunks";
-import type { BlockCell, ChunkData, ChunkID, Geometry, TileSource, Vec2, ViewportState } from "../core/types";
+import { isGridVisible, isTileOverlayLayer, type McadLayer } from "../core/layers";
+import { geometrySpatialIndex } from "../core/spatialIndex";
+import type { BlockCell, ChunkData, ChunkID, Geometry, Vec2, ViewportState } from "../core/types";
 import { colorForBlock } from "./blockColors";
 
 type RenderInput = {
@@ -7,9 +9,10 @@ type RenderInput = {
   chunks: Map<ChunkID, ChunkData>;
   geometries: Geometry[];
   draftVertices: Vec2[];
+  closeDraftPreview?: boolean;
+  circleDraftPreview?: { center: Vec2; radius: number } | null;
   selectedGeometryId: string | null;
-  tileSources: TileSource[];
-  gridVisible: boolean;
+  layers: McadLayer[];
 };
 
 type ProgramInfo = {
@@ -114,7 +117,7 @@ export class MinecraftWebGLRenderer {
     this.addGrassPlane(vertices, input.viewport, toScreen);
     this.addChunks(vertices, input, toScreen);
     this.addGeometry(vertices, input, toScreen);
-    if (input.gridVisible) {
+    if (isGridVisible(input.layers)) {
       this.addGrid(vertices, input.viewport, toScreen);
     }
 
@@ -200,18 +203,59 @@ export class MinecraftWebGLRenderer {
   }
 
   private addGeometry(vertices: number[], input: RenderInput, toScreen: (point: Vec2) => Vec2) {
-    const drawPath = (points: Vec2[], color: [number, number, number, number], closed: boolean) => {
-      for (let i = 0; i < points.length - 1; i += 1) this.addLine(vertices, toScreen(points[i]), toScreen(points[i + 1]), 3, color);
-      if (closed && points.length > 2) this.addLine(vertices, toScreen(points.at(-1)!), toScreen(points[0]), 3, color);
-      for (const point of points) {
+    const toCellCenter = (point: Vec2): Vec2 => ({
+      x: Math.floor(point.x) + 0.5,
+      z: Math.floor(point.z) + 0.5
+    });
+    const drawPath = (points: Vec2[], color: [number, number, number, number], closed: boolean, alignToCells = false) => {
+      const centered = alignToCells ? points.map(toCellCenter) : points;
+      for (let i = 0; i < centered.length - 1; i += 1) this.addLine(vertices, toScreen(centered[i]), toScreen(centered[i + 1]), 3, color);
+      if (closed && centered.length > 2) this.addLine(vertices, toScreen(centered.at(-1)!), toScreen(centered[0]), 3, color);
+      for (const point of centered) {
         const s = toScreen(point);
         this.addQuad(vertices, s.x - 4, s.z - 4, 8, 8, [0.9, 0.92, 0.76, 0.95]);
       }
     };
+    const drawCircle = (center: Vec2, radius: number, color: [number, number, number, number]) => {
+      const segments = Math.max(32, Math.min(128, Math.ceil(radius * 2)));
+      let previous: Vec2 | null = null;
+      for (let i = 0; i <= segments; i += 1) {
+        const angle = (i / segments) * Math.PI * 2;
+        const point = toScreen({ x: center.x + Math.cos(angle) * radius, z: center.z + Math.sin(angle) * radius });
+        if (previous) this.addLine(vertices, previous, point, 3, color);
+        previous = point;
+      }
+      const centerScreen = toScreen(center);
+      this.addQuad(vertices, centerScreen.x - 4, centerScreen.z - 4, 8, 8, [0.9, 0.92, 0.76, 0.95]);
+    };
+    // Use spatial index for viewport culling — only iterate geometries with bounding boxes
+    // that intersect the current viewport (plus margin for edges near the border)
+    const visibleIds = new Set(
+      geometrySpatialIndex.queryViewport(
+        input.viewport.center.x, input.viewport.center.z,
+        input.viewport.width, input.viewport.height,
+        input.viewport.zoom
+      )
+    );
+    // Always include the selected geometry even if offscreen
+    if (input.selectedGeometryId) visibleIds.add(input.selectedGeometryId);
+
     for (const geometry of input.geometries) {
+      if (!visibleIds.has(geometry.id)) continue;
       const selected = geometry.id === input.selectedGeometryId;
-      drawPath(geometry.vertices, selected ? [1, 0.88, 0.32, 1] : [0.68, 0.85, 1, 0.72], geometry.type === "polygon");
+      const color: [number, number, number, number] = selected ? [1, 0.88, 0.32, 1] : [0.68, 0.85, 1, 0.72];
+      if (geometry.type === "circle") {
+        drawCircle(geometry.center, geometry.radius, color);
+        continue;
+      }
+      drawPath(geometry.vertices, color, geometry.type === "polygon", true);
+      if (geometry.type === "polygon") {
+        for (const hole of geometry.holes ?? []) drawPath(hole, color, true, true);
+      }
     }
-    drawPath(input.draftVertices, [0.33, 0.95, 0.77, 1], false);
+    drawPath(input.draftVertices, [0.33, 0.95, 0.77, 1], Boolean(input.closeDraftPreview && input.draftVertices.length >= 3));
+    if (input.circleDraftPreview && input.circleDraftPreview.radius > 0) {
+      drawCircle(input.circleDraftPreview.center, input.circleDraftPreview.radius, [0.33, 0.95, 0.77, 1]);
+    }
   }
 }

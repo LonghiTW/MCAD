@@ -1,13 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import cesium from "vite-plugin-cesium";
 
 export default defineConfig({
-  plugins: [react(), configureServerProxy()],
+  plugins: [react(), cesium(), configureServerProxy()],
   define: {
     global: "globalThis"
   },
   optimizeDeps: {
-    include: ["buffer", "bte-projection"],
+    include: ["buffer", "bte-projection", "cesium"],
     esbuildOptions: {
       inject: ["src/buffer-shim.ts"]
     }
